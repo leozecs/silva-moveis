@@ -1,0 +1,27 @@
+<svg width="220" height="180" viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gold" x1="30" y1="32" x2="132" y2="126" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f0c18b"/>
+      <stop offset="0.45" stop-color="#b8894c"/>
+      <stop offset="1" stop-color="#f6db9a"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="118" y1="28" x2="187" y2="95" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#183e5a"/>
+      <stop offset="1" stop-color="#39708f"/>
+    </linearGradient>
+    <pattern id="weave" width="6" height="6" patternUnits="userSpaceOnUse">
+      <path d="M0 5.5L5.5 0" stroke="rgba(255,255,255,.24)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="220" height="180" rx="28" fill="#101418"/>
+  <circle cx="110" cy="83" r="80" fill="#15191d" stroke="#26323d" stroke-width="5"/>
+  <circle cx="110" cy="83" r="72" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+  <text x="27" y="91" font-family="Georgia, 'Times New Roman', serif" font-size="70" font-weight="700" fill="url(#gold)" letter-spacing="-6">S</text>
+  <text x="74" y="91" font-family="Georgia, 'Times New Roman', serif" font-size="70" font-weight="700" fill="url(#gold)" letter-spacing="-7">M</text>
+  <text x="121" y="91" font-family="Georgia, 'Times New Roman', serif" font-size="70" font-weight="700" fill="url(#blue)" letter-spacing="-7">M</text>
+  <text x="27" y="91" font-family="Georgia, 'Times New Roman', serif" font-size="70" font-weight="700" fill="url(#weave)" letter-spacing="-6">S</text>
+  <text x="74" y="91" font-family="Georgia, 'Times New Roman', serif" font-size="70" font-weight="700" fill="url(#weave)" letter-spacing="-7">M</text>
+  <text x="121" y="91" font-family="Georgia, 'Times New Roman', serif" font-size="70" font-weight="700" fill="url(#weave)" letter-spacing="-7">M</text>
+  <path d="M30 117C52 111 71 112 91 120C108 126 126 129 148 123C161 120 174 115 190 117" stroke="#b8894c" stroke-width="2" opacity=".65"/>
+  <text x="110" y="143" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="23" fill="#d7b782" letter-spacing="-1">SILVA MOVEIS</text>
+</svg>

@@ -1,0 +1,14 @@
+
+> crie-apenas-o-frontend-sem-backend@0.1.0 dev
+> next dev --turbopack --hostname 127.0.0.1 --port 5191
+
+   ▲ Next.js 15.5.7 (Turbopack)
+   - Local:        http://127.0.0.1:5191
+   - Network:      http://127.0.0.1:5191
+
+ ✓ Starting...
+ ✓ Ready in 1988ms
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 5.6s
+ GET /admin 200 in 6975ms
+ GET /admin 200 in 910ms
