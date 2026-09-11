@@ -21,4 +21,4 @@ EXPOSE 9000
 # generated directory ensures the admin assets and compiled config are found.
 WORKDIR /server/apps/backend/.medusa/server
 
-CMD ["pnpm", "start"]
+CMD ["/server/apps/backend/node_modules/.bin/medusa", "start"]
