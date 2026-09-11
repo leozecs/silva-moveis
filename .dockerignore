@@ -1,0 +1,7 @@
+node_modules
+.next
+.git
+.gitignore
+next-dev.out.log
+next-dev.err.log
+README.md

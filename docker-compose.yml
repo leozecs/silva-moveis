@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: silva-medusa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-medusa-backend}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - medusa_postgres_data:/var/lib/postgresql/data
+    networks:
+      - silva-commerce
+
+  redis:
+    image: redis:7-alpine
+    container_name: silva-medusa-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - silva-commerce
+
+  medusa:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: silva-medusa-backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-medusa-backend}
+      REDIS_URL: redis://redis:6379
+      STORE_CORS: http://localhost:3000,http://localhost:9000
+      ADMIN_CORS: http://localhost:9000
+      AUTH_CORS: http://localhost:3000,http://localhost:9000
+      JWT_SECRET: ${JWT_SECRET:-change-this-local-jwt-secret}
+      COOKIE_SECRET: ${COOKIE_SECRET:-change-this-local-cookie-secret}
+      MEDUSA_DB_MIGRATION_CONNECTION_TIMEOUT: ${MEDUSA_DB_MIGRATION_CONNECTION_TIMEOUT:-60000}
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}
+      MERCADOPAGO_WEBHOOK_SECRET: ${MERCADOPAGO_WEBHOOK_SECRET:-}
+    ports:
+      - "9000:9000"
+    networks:
+      - silva-commerce
+
+  silva-moveis-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: silva-moveis-web
+    restart: unless-stopped
+    depends_on:
+      - medusa
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      NEXT_PUBLIC_MEDUSA_BACKEND_URL: ${NEXT_PUBLIC_MEDUSA_BACKEND_URL:-http://localhost:9000}
+      NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:-}
+      NEXT_PUBLIC_MEDUSA_REGION_ID: ${NEXT_PUBLIC_MEDUSA_REGION_ID:-}
+      NEXT_PUBLIC_WHATSAPP_URL: ${NEXT_PUBLIC_WHATSAPP_URL:-}
+    ports:
+      - "3000:3000"
+    networks:
+      - silva-commerce
+
+volumes:
+  medusa_postgres_data:
+
+networks:
+  silva-commerce:
+    driver: bridge
