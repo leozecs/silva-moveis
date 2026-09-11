@@ -17,4 +17,8 @@ RUN pnpm --filter @dtc/backend build
 
 EXPOSE 9000
 
-CMD ["pnpm", "--filter", "@dtc/backend", "start"]
+# Medusa's production build lives in .medusa/server. Starting from the
+# generated directory ensures the admin assets and compiled config are found.
+WORKDIR /server/apps/backend/.medusa/server
+
+CMD ["pnpm", "start"]
