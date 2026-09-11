@@ -38,7 +38,9 @@ export type StorefrontCustomer = {
 type ProductsResponse = { products?: StorefrontProduct[] };
 type CategoriesResponse = { product_categories?: StorefrontCategory[] };
 
-const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL?.replace(/\/$/, "");
+const backendUrl = (
+  process.env.MEDUSA_BACKEND_URL ?? process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
+)?.replace(/\/$/, "");
 const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY;
 const regionId = process.env.NEXT_PUBLIC_MEDUSA_REGION_ID;
 
@@ -51,7 +53,7 @@ async function storefrontFetch<T>(path: string): Promise<T | null> {
   try {
     const response = await fetch(`${backendUrl}${path}`, {
       headers,
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
 
     if (!response.ok) return null;
