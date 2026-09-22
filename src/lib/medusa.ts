@@ -79,8 +79,9 @@ const productFields = [
 export async function getStorefrontProducts(options?: {
   query?: string;
   categoryId?: string;
+  limit?: number;
 }) {
-  const params = new URLSearchParams({ limit: "24", fields: productFields });
+  const params = new URLSearchParams({ limit: String(options?.limit ?? 24), fields: productFields });
   if (regionId) params.set("region_id", regionId);
   if (options?.query) params.set("q", options.query);
   if (options?.categoryId) params.set("category_id", options.categoryId);

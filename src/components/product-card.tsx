@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowUpRight, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +15,7 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
       <Link href={`/produto/${product.handle}`} className="block">
         <div className="image-shine relative aspect-[4/3] overflow-hidden bg-muted">
           {image ? (
-            <img src={image} alt={product.title} className="size-full object-cover transition duration-700 group-hover:scale-105" />
+            <Image src={image} alt={product.title} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover transition duration-700 group-hover:scale-105" unoptimized />
           ) : (
             <div className="grid size-full place-items-center text-sm text-muted-foreground">Imagem não cadastrada</div>
           )}

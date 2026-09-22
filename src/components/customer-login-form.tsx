@@ -1,83 +1,16 @@
 "use client";
-
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Globe, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+type Mode = "login" | "register";
 export function CustomerLoginForm() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const payload = (await response.json().catch(() => null)) as
-        | { message?: string }
-        | null;
-
-      if (!response.ok) {
-        setError(payload?.message ?? "Confira seus dados e tente novamente.");
-        return;
-      }
-
-      router.push("/minha-conta");
-      router.refresh();
-    } catch {
-      setError("Não foi possível conectar. Tente novamente em instantes.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  return (
-    <form className="mt-7 grid gap-5" onSubmit={handleSubmit}>
-      <div className="grid gap-2">
-        <label htmlFor="email" className="text-sm font-medium">
-          E-mail
-        </label>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          placeholder="seu@email.com"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-        />
-      </div>
-      <div className="grid gap-2">
-        <label htmlFor="password" className="text-sm font-medium">
-          Senha
-        </label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
-      </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Entrando..." : "Entrar"}
-      </Button>
-      <p className="text-center text-xs leading-5 text-muted-foreground">
-        Seus dados são enviados somente para a autenticação segura da loja.
-      </p>
-    </form>
-  );
+  const router = useRouter(); const [mode, setMode] = useState<Mode>("login"); const [showPassword, setShowPassword] = useState(false); const [form, setForm] = useState({ name: "", email: "", password: "", confirmation: "" }); const [verificationCode, setVerificationCode] = useState(""); const [needsVerification, setNeedsVerification] = useState(false); const [error, setError] = useState(""); const [isSubmitting, setIsSubmitting] = useState(false);
+  function changeMode(next: Mode) { setMode(next); setError(""); }
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setError(""); setIsSubmitting(true); try { const endpoint = mode === "login" ? "/api/auth/login" : needsVerification ? "/api/auth/register/verify" : "/api/auth/register/start"; const body = mode === "login" ? { email: form.email, password: form.password } : needsVerification ? { code: verificationCode } : { ...form, password_confirmation: form.confirmation }; const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const payload = await response.json().catch(() => null) as { message?: string; requiresVerification?: boolean } | null; if (!response.ok) { setError(payload?.message ?? "Confira seus dados e tente novamente."); return; } if (payload?.requiresVerification) { setNeedsVerification(true); return; } router.push("/minha-conta"); router.refresh(); } catch { setError("Não foi possível conectar. Tente novamente em instantes."); } finally { setIsSubmitting(false); } }
+  async function continueWithGoogle() { setError(""); setIsSubmitting(true); try { const response = await fetch("/api/auth/google", { method: "POST" }); const payload = await response.json().catch(() => null) as { location?: string; message?: string } | null; if (!response.ok || !payload?.location) { setError(payload?.message ?? "O acesso com Google ainda não está disponível."); return; } window.location.assign(payload.location); } catch { setError("Não foi possível iniciar o acesso com Google."); } finally { setIsSubmitting(false); } }
+  const field = (key: keyof typeof form, value: string) => setForm((current) => ({ ...current, [key]: value }));
+  return <div className="mt-7"><div className="grid grid-cols-2 rounded-full bg-secondary p-1 text-sm">{([['register', 'Cadastre-se'], ['login', 'Já possuo conta']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => { changeMode(value); setNeedsVerification(false); }} className={`rounded-full px-4 py-2.5 transition ${mode === value ? "bg-white font-semibold shadow-sm" : "text-muted-foreground"}`}>{label}</button>)}</div><form className="mt-7 grid gap-4" onSubmit={handleSubmit}>{mode === "register" && !needsVerification ? <div className="grid gap-2"><label htmlFor="name" className="text-sm font-medium">Nome completo</label><Input id="name" autoComplete="name" value={form.name} onChange={(e) => field("name", e.target.value)} required /></div> : null}{mode === "register" && needsVerification ? <div className="grid gap-2"><label htmlFor="verification-code" className="text-sm font-medium">Código de confirmação</label><Input id="verification-code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} placeholder="000000" value={verificationCode} onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))} required /><p className="text-xs text-muted-foreground">Enviamos um código de 6 dígitos para {form.email}.</p></div> : null}{mode === "register" && !needsVerification ? <><div className="grid gap-2"><label htmlFor="email" className="text-sm font-medium">E-mail</label><Input id="email" type="email" autoComplete="email" placeholder="seu@email.com" value={form.email} onChange={(e) => field("email", e.target.value)} required /></div><div className="grid gap-2"><label htmlFor="password" className="text-sm font-medium">Senha</label><div className="relative"><Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={(e) => field("password", e.target.value)} required minLength={8} className="pr-11" /><button type="button" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></div></div><div className="grid gap-2"><label htmlFor="confirmation" className="text-sm font-medium">Confirmar senha</label><Input id="confirmation" type="password" autoComplete="new-password" value={form.confirmation} onChange={(e) => field("confirmation", e.target.value)} required minLength={8} /></div></> : null}{mode === "login" ? <><div className="grid gap-2"><label htmlFor="email" className="text-sm font-medium">E-mail</label><Input id="email" type="email" autoComplete="email" placeholder="seu@email.com" value={form.email} onChange={(e) => field("email", e.target.value)} required /></div><div className="grid gap-2"><label htmlFor="password" className="text-sm font-medium">Senha</label><div className="relative"><Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={form.password} onChange={(e) => field("password", e.target.value)} required className="pr-11" /><button type="button" aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></div></div><div className="text-right"><button type="button" onClick={() => router.push("/recuperar-senha")} className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Esqueci minha senha</button></div></> : null}{error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}<Button type="submit" disabled={isSubmitting} size="lg">{isSubmitting ? "Aguarde..." : mode === "login" ? "Entrar" : needsVerification ? "Confirmar cadastro" : "Enviar código"}</Button>{!needsVerification ? <><div className="flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" /><span>ou</span><span className="h-px flex-1 bg-border" /></div><Button type="button" variant="outline" size="lg" onClick={continueWithGoogle} disabled={isSubmitting}><Globe className="size-4" />Continuar com Google</Button></> : null}</form><p className="mt-6 text-center text-xs leading-5 text-muted-foreground">Acesso exclusivo para clientes Silva Móveis.</p></div>;
 }

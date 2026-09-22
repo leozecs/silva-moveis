@@ -1,0 +1,8 @@
+"use client";
+import { Suspense } from "react";
+import { FormEvent, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+function ResetForm() { const params = useSearchParams(); const router = useRouter(); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [loading, setLoading] = useState(false); async function submit(event: FormEvent) { event.preventDefault(); setLoading(true); const response = await fetch("/api/auth/password-reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: params.get("token"), email: params.get("email"), password }) }); const payload = await response.json().catch(() => null); if (!response.ok) setError(payload?.message ?? "Link inválido ou expirado."); else router.push("/acesso"); setLoading(false); } return <main className="mx-auto max-w-md px-4 py-16"><h1 className="text-3xl font-semibold">Criar nova senha</h1><form onSubmit={submit} className="mt-8 grid gap-4"><label className="grid gap-2 text-sm font-medium">Nova senha<Input type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required /></label>{error ? <p className="text-sm text-destructive">{error}</p> : null}<Button disabled={loading}>{loading ? "Salvando..." : "Salvar nova senha"}</Button></form></main>; }
+export default function RedefinirSenhaPage() { return <Suspense fallback={<main className="mx-auto max-w-md px-4 py-16">Carregando...</main>}><ResetForm /></Suspense>; }

@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { useCart } from "@/components/cart-provider";
 
 const screenGroups = [
   {
@@ -49,7 +50,7 @@ const screenGroups = [
 export function SiteHeader() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const cartCount = 0;
+  const { itemCount: cartCount } = useCart();
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
