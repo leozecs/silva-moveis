@@ -178,6 +178,21 @@ Este documento define o mínimo necessário para entregar uma loja virtual real,
 - [ ] Token de CI guardado como secret, nunca no repositório.
 - [ ] Deploy atômico: migration/infra primeiro, frontend depois, promoção por último.
 
+## Infraestrutura — evidência do capítulo
+
+Base versionada em [`docs/infraestrutura.md`](docs/infraestrutura.md), [`docker-compose.prod.yml`](docker-compose.prod.yml) e scripts em `ops/`.
+
+- [x] Compose de produção separa staging do storefront da Vercel.
+- [x] PostgreSQL e Redis sem portas públicas no compose de produção.
+- [x] Volumes persistentes, healthchecks, limites de memória e rotação de logs definidos.
+- [x] Backup PostgreSQL antes da promoção documentado em [`ops/backup-postgres.sh`](ops/backup-postgres.sh).
+- [x] Health check de API, banco, Redis e disco documentado em [`ops/healthcheck-vps.sh`](ops/healthcheck-vps.sh).
+- [x] Diagrama de topologia e relacionamento de dados documentado.
+- [ ] Aplicar o compose na VPS Hostinger e registrar `docker compose config`.
+- [ ] Confirmar firewall, reverse proxy/TLS, portas efetivamente expostas e rate limit.
+- [ ] Executar backup real, copiar para fora da VPS e testar restore em banco separado.
+- [ ] Configurar monitoramento externo, alertas e rotina de rollback.
+
 ## 10. E-mail, comunicação e dados do cliente
 
 - [ ] Provedor transacional configurado.
