@@ -1,9 +1,32 @@
 import Link from "next/link";
-import { ArrowLeft, BarChart3, Boxes, LockKeyhole, Settings, ShoppingBag } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { getMerchantSession } from "@/lib/merchant-session";
+import { CustomerLogoutButton } from "@/components/customer-logout-button";
 
-export default function AdminPage() {
-  return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 lg:py-16"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold">Área do lojista</p><h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">Painel administrativo.</h1></div><Link href="/" className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition hover:bg-muted"><ArrowLeft className="size-4" />Voltar à loja</Link></div><Card className="mt-10 border-gold/30 bg-graphite text-white"><CardContent className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:p-8"><LockKeyhole className="size-8 shrink-0 text-gold" /><div><h2 className="text-xl font-semibold">Acesso restrito</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-white/70">O painel só deve exibir dados depois que a autenticação do lojista, a Medusa e as permissões forem configuradas.</p></div></CardContent></Card><section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Card><CardContent className="p-6"><Boxes className="size-5 text-gold" /><h2 className="mt-4 font-semibold">Catálogo</h2><p className="mt-2 text-sm text-muted-foreground">Produtos e categorias da Medusa.</p></CardContent></Card><Card><CardContent className="p-6"><ShoppingBag className="size-5 text-gold" /><h2 className="mt-4 font-semibold">Pedidos</h2><p className="mt-2 text-sm text-muted-foreground">Pedidos reais da operação.</p></CardContent></Card><Card><CardContent className="p-6"><BarChart3 className="size-5 text-gold" /><h2 className="mt-4 font-semibold">Relatórios</h2><p className="mt-2 text-sm text-muted-foreground">Métricas geradas pelo backend.</p></CardContent></Card><Card><CardContent className="p-6"><Settings className="size-5 text-gold" /><h2 className="mt-4 font-semibold">Configurações</h2><p className="mt-2 text-sm text-muted-foreground">Integrações e permissões.</p></CardContent></Card></section></main>
-  );
+export default async function AdminPage() {
+  const merchant = await getMerchantSession();
+  if (!merchant) redirect("/acesso");
+  const base = (process.env.MEDUSA_BACKEND_URL ?? process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL)?.replace(/\/$/, "");
+  const adminUrl = process.env.MEDUSA_ADMIN_URL ?? `${base}/app`;
+  const token = (await cookies()).get("medusa_merchant_token")!.value;
+  const sections = [
+    { label: "Produtos", api: "products", path: "products" },
+    { label: "Pedidos", api: "orders", path: "orders" },
+    { label: "Clientes", api: "customers", path: "customers" },
+    { label: "Itens de estoque", api: "inventory-items", path: "inventory" },
+  ];
+  const counts = await Promise.all(sections.map(async (section) => {
+    try {
+      const response = await fetch(`${base}/admin/${section.api}?limit=1`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: AbortSignal.timeout(10000) });
+      if (!response.ok) return null;
+      const payload = await response.json();
+      return typeof payload.count === "number" ? payload.count : null;
+    } catch { return null; }
+  }));
+  return <main className="container-premium py-12">
+    <div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm text-muted-foreground">{merchant.email}</p><h1 className="mt-2 text-4xl font-semibold">Painel do lojista</h1></div><CustomerLogoutButton /></div>
+    <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{sections.map((section, index) => <Link key={section.api} href={`${adminUrl}/${section.path}`} className="rounded-xl border bg-white p-6 transition hover:border-gold"><h2 className="font-medium">{section.label}</h2><p className="mt-4 text-3xl font-semibold">{counts[index] ?? "Indisponível"}</p><p className="mt-4 text-sm underline">Abrir gestão</p></Link>)}</div>
+    <p className="mt-6 text-sm text-muted-foreground">Os dados acima vêm da sua loja. As ferramentas de gestão abrem o painel administrativo, que pode solicitar autenticação própria.</p>
+  </main>;
 }

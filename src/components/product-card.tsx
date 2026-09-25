@@ -7,11 +7,11 @@ import { getProductImage, getProductPrice, type StorefrontProduct } from "@/lib/
 
 export function ProductCard({ product }: { product: StorefrontProduct }) {
   const image = getProductImage(product);
-  const category = product.categories?.[0]?.name ?? product.collection?.title;
+  const category = product.categories?.find((item) => item.metadata?.storefront_filter === true)?.name ?? product.categories?.[0]?.name ?? product.collection?.title;
   const price = getProductPrice(product);
 
   return (
-    <Card className="group overflow-hidden rounded-md border-border/80 bg-white p-0 shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-xl">
+    <Card data-testid="product-card" data-product-id={product.id} data-price={product.variants?.[0]?.calculated_price?.calculated_amount} className="group overflow-hidden rounded-md border-border/80 bg-white p-0 shadow-sm transition duration-500 hover:-translate-y-1 hover:shadow-xl">
       <Link href={`/produto/${product.handle}`} className="block">
         <div className="image-shine relative aspect-[4/3] overflow-hidden bg-muted">
           {image ? (

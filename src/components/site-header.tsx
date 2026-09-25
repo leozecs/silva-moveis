@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Menu,
   Search,
@@ -27,9 +27,7 @@ const screenGroups = [
   {
     label: "Loja",
     items: [
-      { label: "Home", href: "/" },
-      { label: "Catalogo", href: "/catalogo" },
-      { label: "Carrinho", href: "/carrinho" },
+      { label: "Catálogo", href: "/catalogo" },
       { label: "Sobre", href: "/sobre" },
       { label: "Contato", href: "/contato" },
     ],
@@ -41,16 +39,40 @@ const screenGroups = [
       { label: "Minha conta", href: "/minha-conta" },
     ],
   },
-  {
-    label: "Lojista (preview)",
-    items: [{ label: "Painel admin", href: "/admin" }],
-  },
 ];
+
+function SearchForm({ mobile = false, query, setQuery, onSubmit }: {
+  mobile?: boolean; query: string; setQuery: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return <form onSubmit={onSubmit} className={mobile ? "flex w-full sm:hidden" : "hidden min-w-0 flex-1 sm:flex"} role="search">
+    <div className="relative w-full"><Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input type="search" enterKeyHint="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Sofá, poltrona, mesa..." aria-label="Buscar produtos" className="h-12 rounded-full border-black/15 bg-white/85 pl-11 pr-4 text-base shadow-none focus-visible:bg-white" />
+    </div>
+  </form>;
+}
 
 export function SiteHeader() {
   const router = useRouter();
+  const pathname = usePathname();
+  const [signedIn, setSignedIn] = useState(false);
+  const [accountHref, setAccountHref] = useState("/acesso");
   const [query, setQuery] = useState("");
   const { itemCount: cartCount } = useCart();
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = () => {
+      fetch("/api/auth/session", { cache: "no-store", signal: controller.signal })
+        .then((response) => response.json()).then((session) => {
+          if (controller.signal.aborted) return;
+          setSignedIn(session.authenticated === true);
+          setAccountHref(session.href === "/admin" ? "/admin" : session.authenticated ? "/minha-conta" : "/acesso");
+        }).catch(() => {});
+    };
+    refresh();
+    window.addEventListener("silva-session-changed", refresh);
+    return () => { controller.abort(); window.removeEventListener("silva-session-changed", refresh); };
+  }, [pathname]);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,45 +81,24 @@ export function SiteHeader() {
     router.push(term ? `/catalogo?busca=${encodeURIComponent(term)}` : "/catalogo");
   }
 
-  function SearchForm({ mobile = false }: { mobile?: boolean }) {
-    return (
-      <form
-        onSubmit={handleSearch}
-        className={mobile ? "flex w-full sm:hidden" : "hidden min-w-0 flex-1 sm:flex"}
-        role="search"
-      >
-        <div className="relative w-full">
-          <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Sofá, poltrona, mesa..."
-            aria-label="Buscar produtos"
-            className="h-12 rounded-full border-black/15 bg-white/85 pl-11 pr-4 text-sm shadow-none focus-visible:bg-white"
-          />
-        </div>
-      </form>
-    );
-  }
-
   return (
     <header className="sticky top-0 z-40 border-b border-black/10 bg-ivory shadow-sm">
       <div className="container-premium">
         <div className="flex min-h-24 items-center gap-3 py-3 sm:gap-5">
           <BrandLogo />
-          <SearchForm />
+          <SearchForm query={query} setQuery={setQuery} onSubmit={handleSearch} />
 
           <Link
-            href="/acesso"
-            className="header-enter-link hidden shrink-0 items-center gap-2 rounded-md px-2 py-2 text-left transition hover:bg-white/70 sm:flex"
+            href={accountHref}
+            className="header-enter-link flex shrink-0 items-center gap-2 rounded-md px-2 py-2 text-left transition hover:bg-white/70"
           >
             <UserRound className="size-5 text-gold" />
-            <span>
+            {signedIn ? <span className="text-sm font-semibold">Minha Conta</span> : <span>
               <span className="block text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                 Minha conta
               </span>
               <span className="block text-sm font-semibold">Entrar</span>
-            </span>
+            </span>}
           </Link>
 
           <Link
@@ -145,7 +146,7 @@ export function SiteHeader() {
         </div>
 
         <div className="pb-3 sm:hidden">
-          <SearchForm mobile />
+          <SearchForm mobile query={query} setQuery={setQuery} onSubmit={handleSearch} />
         </div>
       </div>
     </header>

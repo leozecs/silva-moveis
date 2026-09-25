@@ -1,46 +1,99 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { assertSameOrigin, readJsonObject, requireId, requireQuantity, StoreError } from "@/lib/http-policy";
+import { privateJson, requireCustomer, storeFailure, storeRequest } from "@/lib/store-server";
+import type { StoreCart } from "@/lib/cart";
+import { emptyAddress, PAYMENT_METHODS, TERMS_VERSION, toMedusaAddress, validateAddress, type AddressDraft } from "@/lib/checkout-contract";
 
-const backendUrl = (process.env.MEDUSA_BACKEND_URL ?? process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL)?.replace(/\/$/, "");
-const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY;
-const regionId = process.env.NEXT_PUBLIC_MEDUSA_REGION_ID;
+const addressFields = "?fields=%2Bshipping_address.metadata,%2Bbilling_address.metadata";
 
-async function medusa(path: string, init: RequestInit = {}) {
-  if (!backendUrl) throw new Error("A loja ainda não está disponível.");
-  const headers = new Headers(init.headers);
-  headers.set("Content-Type", "application/json");
-  if (publishableKey) headers.set("x-publishable-api-key", publishableKey);
-  const token = (await cookies()).get("medusa_customer_token")?.value;
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(`${backendUrl}${path}`, { ...init, headers, cache: "no-store" });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(payload?.message ?? payload?.type ?? "Não foi possível concluir a operação.");
-  return payload;
+async function ownedCart(id: string, customerId: string) {
+  const { cart } = await storeRequest<{ cart: StoreCart }>(`/store/carts/${id}${addressFields}`);
+  if (cart.customer_id !== customerId) throw new StoreError(403, "Este carrinho não pertence à sua conta.");
+  if (cart.completed_at) throw new StoreError(409, "Este carrinho já foi concluído.", "cart_completed");
+  return cart;
+}
+
+function address(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new StoreError(400, "Endereço inválido.");
+  const object = value as Record<string, unknown>;
+  const result = { ...emptyAddress };
+  for (const key of Object.keys(result) as Array<keyof AddressDraft>) {
+    if (typeof object[key] !== "string") throw new StoreError(400, "Endereço incompleto.");
+    result[key] = object[key] as string;
+  }
+  if (Object.keys(validateAddress(result)).length) throw new StoreError(400, "Confira os campos do endereço.");
+  return toMedusaAddress(result);
 }
 
 export async function GET(request: Request) {
-  const id = new URL(request.url).searchParams.get("cart_id");
-  if (!id) return NextResponse.json({ cart: null });
-  try { return NextResponse.json(await medusa(`/store/carts/${id}`)); }
-  catch (error) { return NextResponse.json({ message: error instanceof Error ? error.message : "Carrinho indisponível." }, { status: 502 }); }
+  try {
+    const customer = await requireCustomer();
+    const id = new URL(request.url).searchParams.get("cart_id");
+    if (!id) return privateJson({ cart: null });
+    return privateJson({ cart: await ownedCart(requireId(id, "cart"), customer.id) });
+  } catch (error) { return storeFailure(error); }
 }
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as { action?: string; cartId?: string; lineItemId?: string; variant_id?: string; quantity?: number; data?: Record<string, unknown>; provider_id?: string; shipping_option_id?: string };
-    const action = body.action;
-    let payload;
-    if (action === "create") payload = await medusa("/store/carts", { method: "POST", body: JSON.stringify({ region_id: regionId }) });
-    else if (action === "add") payload = await medusa(`/store/carts/${body.cartId}/line-items`, { method: "POST", body: JSON.stringify({ variant_id: body.variant_id, quantity: body.quantity ?? 1 }) });
-    else if (action === "update") payload = await medusa(`/store/carts/${body.cartId}/line-items/${body.lineItemId}`, { method: "POST", body: JSON.stringify({ quantity: body.quantity }) });
-    else if (action === "remove") payload = await medusa(`/store/carts/${body.cartId}/line-items/${body.lineItemId}`, { method: "DELETE" });
-    else if (action === "update_cart") payload = await medusa(`/store/carts/${body.cartId}`, { method: "POST", body: JSON.stringify(body.data ?? {}) });
-    else if (action === "shipping_options") payload = await medusa(`/store/shipping-options?cart_id=${encodeURIComponent(body.cartId ?? "")}`);
-    else if (action === "add_shipping") payload = await medusa(`/store/carts/${body.cartId}/shipping-methods`, { method: "POST", body: JSON.stringify({ option_id: body.shipping_option_id }) });
-    else if (action === "payment_collection") payload = await medusa("/store/payment-collections", { method: "POST", body: JSON.stringify({ cart_id: body.cartId }) });
-    else if (action === "payment_session") payload = await medusa(`/store/payment-collections/${body.data?.collectionId}/payment-sessions`, { method: "POST", body: JSON.stringify({ provider_id: body.provider_id }) });
-    else if (action === "complete") payload = await medusa(`/store/carts/${body.cartId}/complete`, { method: "POST", body: JSON.stringify({}) });
-    else return NextResponse.json({ message: "Operação inválida." }, { status: 400 });
-    return NextResponse.json(payload);
-  } catch (error) { return NextResponse.json({ message: error instanceof Error ? error.message : "Não foi possível atualizar o carrinho." }, { status: 502 }); }
+    assertSameOrigin(request);
+    const body = await readJsonObject(request);
+    const customer = await requireCustomer();
+    if (body.action === "create") {
+      const region_id = process.env.NEXT_PUBLIC_MEDUSA_REGION_ID;
+      if (!region_id) throw new StoreError(503, "Região da loja indisponível.");
+      return privateJson(await storeRequest(`/store/carts${addressFields}`, { method: "POST", body: JSON.stringify({ region_id, email: customer.email }) }));
+    }
+    const id = requireId(body.cartId, "cart");
+    const cart = await ownedCart(id, customer.id);
+    const path = `/store/carts/${id}`;
+    const post = (url: string, data: unknown, method = "POST") => storeRequest(`${url}${addressFields}`, { method, body: JSON.stringify(data) });
+    switch (body.action) {
+      case "add":
+        return privateJson(await post(`${path}/line-items`, { variant_id: requireId(body.variant_id, "variant"), quantity: requireQuantity(body.quantity ?? 1) }));
+      case "update":
+      case "remove": {
+        const line = requireId(body.lineItemId, "cali");
+        if (!cart.items?.some((item) => item.id === line)) throw new StoreError(404, "Item não encontrado neste carrinho.");
+        if (body.action === "update") return privateJson(await post(`${path}/line-items/${line}`, { quantity: requireQuantity(body.quantity) }));
+        await storeRequest(`${path}/line-items/${line}`, { method: "DELETE" });
+        return privateJson({ cart: await ownedCart(id, customer.id) });
+      }
+      case "update_cart": {
+        if (!body.data || typeof body.data !== "object" || Array.isArray(body.data)) throw new StoreError(400, "Dados inválidos.");
+        const data = body.data as Record<string, unknown>;
+        const allowed = ["shipping", "billing", "same_billing_address", "payment_method", "terms_accepted"];
+        if (Object.keys(data).some((key) => !allowed.includes(key))) throw new StoreError(400, "Campo não permitido.");
+        const payload: Record<string, unknown> = { email: customer.email };
+        if (data.shipping) {
+          payload.shipping_address = address(data.shipping);
+          payload.billing_address = data.same_billing_address === true ? payload.shipping_address : address(data.billing);
+        }
+        const metadata: Record<string, unknown> = { ...cart.metadata };
+        if (data.payment_method !== undefined) {
+          if (!(PAYMENT_METHODS as readonly unknown[]).includes(data.payment_method)) throw new StoreError(400, "Selecione uma forma de pagamento válida.");
+          metadata.payment_method = data.payment_method;
+        }
+        if (data.terms_accepted !== undefined) {
+          if (typeof data.terms_accepted !== "boolean") throw new StoreError(400, "Aceite inválido.");
+          metadata.terms_acceptance = data.terms_accepted ? { version: TERMS_VERSION, accepted_at: new Date().toISOString(), customer_id: customer.id } : null;
+        }
+        payload.metadata = metadata;
+        return privateJson(await post(path, payload));
+      }
+      case "apply_coupon":
+      case "remove_coupon": {
+        if (typeof body.code !== "string" || !body.code.trim() || body.code.length > 100) throw new StoreError(400, "Informe um cupom válido.");
+        await post(`${path}/promotions`, { promo_codes: [body.code.trim()] }, body.action === "remove_coupon" ? "DELETE" : "POST");
+        return privateJson({ cart: await ownedCart(id, customer.id) });
+      }
+      case "shipping_options":
+        return privateJson(await storeRequest(`/store/shipping-options?cart_id=${encodeURIComponent(id)}`));
+      case "add_shipping":
+        return privateJson(await post(`${path}/shipping-methods`, { option_id: requireId(body.shipping_option_id, "so") }));
+      // Enabled after the attempt workflow, reservation and test provider are verified.
+      case "payment_collection": case "payment_session": case "complete":
+        throw new StoreError(409, "Pagamento ainda não habilitado. Nenhuma cobrança foi realizada.", "payment_unavailable");
+      default: throw new StoreError(400, "Operação inválida.");
+    }
+  } catch (error) { return storeFailure(error); }
 }

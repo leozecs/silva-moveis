@@ -1,0 +1,64 @@
+import assert from 'node:assert/strict';
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
+const base = process.env.SILVA_BROWSER_URL ?? 'http://localhost:3000';
+if (!['localhost', '127.0.0.1'].includes(new URL(base).hostname)) throw new Error('Only local frontend verification is allowed.');
+const browser = await chromium.launch({ headless: true });
+try {
+  for (const mobile of [false, true]) {
+    const context = await browser.newContext({ viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, isMobile: mobile, hasTouch: mobile });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(base, { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('product-card').first().waitFor();
+    const initialCount = await page.getByTestId('product-card').count();
+    assert.ok(initialCount > 24, 'Full catalog must be available, not just first 24 items.');
+    await page.getByRole('button', { name: 'Aceitar', exact: true }).click({ timeout: 2000 }).catch(() => {});
+    const search = page.locator('header input:visible');
+    await search.click();
+    await search.pressSequentially('poltrona azul', { delay: 80 });
+    assert.equal(await search.inputValue(), 'poltrona azul');
+    assert.ok(await search.evaluate((element) => document.activeElement === element), 'Search must retain focus after every character.');
+    await search.fill('');
+    const hero = page.getByRole('region', { name: 'Produtos em destaque' });
+    await hero.getByRole('button', { name: /^Mostrar / }).first().waitFor();
+    assert.equal(await hero.getByRole('button', { name: /^Mostrar / }).count(), 3);
+    await hero.locator('img').evaluate((image) => image.decode());
+    assert.ok(await hero.locator('img').evaluate((image) => image.naturalWidth > 0), 'Hero image must load.');
+    const before = await hero.getByRole('heading').innerText();
+    await page.waitForTimeout(3200);
+    assert.notEqual(await hero.getByRole('heading').innerText(), before, 'Hero must rotate after 3 seconds.');
+    await page.getByRole('button', { name: 'Abrir menu', exact: true }).click();
+    const menu = page.getByRole('menu');
+    await menu.waitFor();
+    for (const name of ['Home', 'Carrinho', 'Painel admin']) assert.equal(await menu.getByRole('menuitem', { name, exact: true }).count(), 0);
+    await page.keyboard.press('Escape');
+    if (mobile) await page.getByRole('button', { name: 'Filtros', exact: true }).click();
+    await page.getByRole('button', { name: 'Banquetas', exact: true }).click();
+    assert.equal(await page.getByTestId('product-card').count(), 9);
+    await page.getByRole('button', { name: 'Limpar filtros', exact: true }).click();
+    const slider = page.getByRole('slider');
+    await slider.fill('100000');
+    await page.waitForTimeout(150);
+    const limited = await page.getByTestId('product-card').evaluateAll((nodes) => nodes.map((node) => Number(node.dataset.price)));
+    assert.ok(limited.length > 0 && limited.every((price) => price <= 100000));
+    await page.getByRole('button', { name: 'Limpar filtros', exact: true }).click();
+    await page.locator('summary').filter({ hasText: 'Ordenar' }).click();
+    await page.getByRole('button', { name: 'Do mais caro para o mais barato', exact: true }).click();
+    const prices = await page.getByTestId('product-card').evaluateAll((nodes) => nodes.map((node) => Number(node.dataset.price)));
+    assert.deepEqual(prices, [...prices].sort((a, b) => b - a));
+    assert.equal(await page.locator('footer').count(), 1);
+    assert.equal(await page.locator('footer').evaluate((node) => getComputedStyle(node).position), 'fixed');
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'No horizontal overflow.');
+    await page.screenshot({ path: `/tmp/silva-${mobile ? 'mobile' : 'desktop'}-verified.png` });
+    for (const path of ['/carrinho', '/recuperar-senha']) {
+      await page.goto(base + path, { waitUntil: 'domcontentloaded' });
+      assert.equal(await page.locator('footer').count(), 0);
+    }
+    await page.goto(base + '/admin', { waitUntil: 'domcontentloaded' });
+    await page.waitForURL('**/acesso');
+    assert.deepEqual(errors, []);
+    console.log(`PASS ${mobile ? 'mobile' : 'desktop'}: ${initialCount} products; search focus; 3-slide timer; menu; category; price; sorting; footer; admin guard.`);
+    await context.close();
+  }
+} finally { await browser.close(); }

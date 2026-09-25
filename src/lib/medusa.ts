@@ -1,6 +1,11 @@
 export type StorefrontVariant = {
   id: string;
   title?: string;
+  manage_inventory?: boolean;
+  allow_backorder?: boolean;
+  inventory_quantity?: number | null;
+  metadata?: Record<string, unknown> | null;
+  options?: Array<{ value: string; option_id: string; option?: { title?: string }; metadata?: Record<string, unknown> | null }>;
   calculated_price?: {
     calculated_amount: number;
     currency_code: string;
@@ -16,8 +21,9 @@ export type StorefrontProduct = {
   thumbnail?: string | null;
   images?: Array<{ id: string; url: string }>;
   variants?: StorefrontVariant[];
+  options?: Array<{ id: string; title: string }>;
   collection?: { id: string; title: string; handle: string } | null;
-  categories?: Array<{ id: string; name: string; handle: string }>;
+  categories?: Array<{ id: string; name: string; handle: string; metadata?: Record<string, unknown> | null }>;
 };
 
 export type StorefrontCategory = {
@@ -35,7 +41,7 @@ export type StorefrontCustomer = {
   last_name?: string | null;
 };
 
-type ProductsResponse = { products?: StorefrontProduct[] };
+type ProductsResponse = { products?: StorefrontProduct[]; count?: number };
 type CategoriesResponse = { product_categories?: StorefrontCategory[] };
 
 const backendUrl = (
@@ -70,10 +76,17 @@ const productFields = [
   "description",
   "subtitle",
   "thumbnail",
-  "images",
+  "*images",
   "variants",
+  "variants.calculated_price",
+  "variants.manage_inventory",
+  "variants.allow_backorder",
+  "variants.inventory_quantity",
+  "variants.metadata",
+  "*variants.options",
+  "*options",
   "collection",
-  "categories",
+  "*categories",
 ].join(",");
 
 export async function getStorefrontProducts(options?: {
@@ -81,15 +94,20 @@ export async function getStorefrontProducts(options?: {
   categoryId?: string;
   limit?: number;
 }) {
-  const params = new URLSearchParams({ limit: String(options?.limit ?? 24), fields: productFields });
+  const params = new URLSearchParams({ limit: String(options?.limit ?? 100), fields: productFields });
   if (regionId) params.set("region_id", regionId);
   if (options?.query) params.set("q", options.query);
   if (options?.categoryId) params.set("category_id", options.categoryId);
 
-  const payload = await storefrontFetch<ProductsResponse>(
-    `/store/products?${params.toString()}`
-  );
-  return payload?.products ?? [];
+  const products: StorefrontProduct[] = [];
+  for (let offset = 0; ; offset += 100) {
+    params.set("offset", String(offset));
+    const payload = await storefrontFetch<ProductsResponse>(`/store/products?${params.toString()}`);
+    if (!payload?.products) return [];
+    products.push(...payload.products);
+    if (options?.limit || payload.products.length < 100 || products.length >= (payload.count ?? Infinity)) break;
+  }
+  return products;
 }
 
 export async function getStorefrontProduct(handle: string) {
@@ -109,11 +127,21 @@ export async function getStorefrontCategories() {
   const payload = await storefrontFetch<CategoriesResponse>(
     "/store/product-categories?limit=100"
   );
-  return payload?.product_categories ?? [];
+  const categories = payload?.product_categories ?? [];
+  const storefrontCategories = categories.filter((category) => category.metadata?.storefront_filter === true);
+  return storefrontCategories.length ? storefrontCategories : categories;
 }
 
 export function getProductImage(product: StorefrontProduct) {
-  return product.thumbnail ?? product.images?.[0]?.url ?? null;
+  return storefrontImageUrl(product.thumbnail ?? product.images?.[0]?.url ?? null);
+}
+
+export function storefrontImageUrl(url: string | null) {
+  if (!url) return null;
+  // These exact catalog assets are versioned with the storefront. Avoid the
+  // retired Vercel hostname while preserving other merchant-provided URLs.
+  const legacy = /^https:\/\/silva-moveis\.vercel\.app(\/catalog-images\/\d{2}\.jpg)$/.exec(url);
+  return legacy ? legacy[1] : url;
 }
 
 export function getProductPrice(product: StorefrontProduct) {

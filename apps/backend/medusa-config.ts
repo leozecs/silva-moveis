@@ -5,6 +5,7 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 const mercadoPagoAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN
 const mercadoPagoWebhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET
 const googleAuthEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_CALLBACK_URL)
+const testPaymentsEnabled = process.env.SILVA_COMMERCE_TEST === 'true' && process.env.NODE_ENV !== 'production'
 
 const authProviders = [
   { resolve: '@medusajs/medusa/auth-emailpass', id: 'emailpass' },
@@ -38,12 +39,18 @@ const mercadoPagoProvider = mercadoPagoAccessToken
   : []
 
 module.exports = defineConfig({
+  admin: { disable: process.env.MEDUSA_ADMIN_DISABLED === 'true' },
   plugins: mercadoPagoPlugin,
   modules: [
+    { resolve: './src/modules/checkout' },
+    ...(process.env.REDIS_URL ? [{
+      resolve: '@medusajs/medusa/locking',
+      options: { providers: [{ resolve: '@medusajs/medusa/locking-redis', id: 'locking-redis', is_default: true, options: { redisUrl: process.env.REDIS_URL } }] },
+    }] : []),
     { resolve: '@medusajs/medusa/auth', dependencies: [ContainerRegistrationKeys.LOGGER], options: { providers: authProviders } },
     {
       resolve: '@medusajs/medusa/payment',
-      options: { providers: mercadoPagoProvider },
+      options: { providers: [...mercadoPagoProvider, ...(testPaymentsEnabled ? [{ resolve: './src/modules/test-payment', id: 'silva-test', options: {} }] : [])] },
     },
   ],
   projectConfig: {
