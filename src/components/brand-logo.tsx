@@ -9,10 +9,10 @@ export function BrandLogo() {
       aria-label="Silva Móveis"
     >
       <Image
-        src="/silva-moveis-logo-original.png"
+        src="/silva-moveis-logo-transparent.png"
         alt="Silva Móveis"
-        width={206}
-        height={151}
+        width={1465}
+        height={1074}
         priority
         className="h-12 w-auto object-contain sm:h-14"
       />

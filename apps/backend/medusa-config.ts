@@ -43,6 +43,13 @@ module.exports = defineConfig({
   plugins: mercadoPagoPlugin,
   modules: [
     { resolve: './src/modules/checkout' },
+    ...(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL ? [{
+      resolve: '@medusajs/medusa/notification',
+      options: { providers: [{ resolve: './src/modules/order-email', id: 'silva-order-email', options: {
+        channels: ['email'], apiKey: process.env.RESEND_API_KEY, from: process.env.RESEND_FROM_EMAIL,
+        storefrontUrl: process.env.STOREFRONT_URL ?? 'https://silvamoveis.com.br',
+      } }] },
+    }] : []),
     ...(process.env.REDIS_URL ? [{
       resolve: '@medusajs/medusa/locking',
       options: { providers: [{ resolve: '@medusajs/medusa/locking-redis', id: 'locking-redis', is_default: true, options: { redisUrl: process.env.REDIS_URL } }] },

@@ -19,6 +19,12 @@ try {
     await search.pressSequentially('poltrona azul', { delay: 80 });
     assert.equal(await search.inputValue(), 'poltrona azul');
     assert.ok(await search.evaluate((element) => document.activeElement === element), 'Search must retain focus after every character.');
+    await search.fill('poltrona');
+    await page.getByRole('link', { name: 'Ver mais +', exact: true }).waitFor();
+    assert.equal(await page.getByRole('option').count(), 5, 'Suggestions are limited to five products.');
+    assert.match(await page.getByRole('link', { name: 'Ver mais +', exact: true }).getAttribute('href'), /busca=poltrona/);
+    await search.press('ArrowUp');
+    assert.equal(await page.getByRole('option').last().getAttribute('aria-selected'), 'true');
     await search.fill('');
     const hero = page.getByRole('region', { name: 'Produtos em destaque' });
     await hero.getByRole('button', { name: /^Mostrar / }).first().waitFor();
@@ -26,8 +32,10 @@ try {
     await hero.locator('img').evaluate((image) => image.decode());
     assert.ok(await hero.locator('img').evaluate((image) => image.naturalWidth > 0), 'Hero image must load.');
     const before = await hero.getByRole('heading').innerText();
-    await page.waitForTimeout(3200);
-    assert.notEqual(await hero.getByRole('heading').innerText(), before, 'Hero must rotate after 3 seconds.');
+    const resume = hero.getByRole('button', { name: 'Iniciar rotação', exact: true });
+    if (await resume.count()) await resume.click();
+    await page.waitForFunction((title) => document.querySelector('[aria-roledescription="carrossel"] h1')?.textContent !== title, before, { timeout: 7000 });
+    assert.match(await hero.locator('a').filter({ has: page.locator('img') }).getAttribute('href'), /^\/produto\//);
     await page.getByRole('button', { name: 'Abrir menu', exact: true }).click();
     const menu = page.getByRole('menu');
     await menu.waitFor();
@@ -44,7 +52,7 @@ try {
     assert.ok(limited.length > 0 && limited.every((price) => price <= 100000));
     await page.getByRole('button', { name: 'Limpar filtros', exact: true }).click();
     await page.locator('summary').filter({ hasText: 'Ordenar' }).click();
-    await page.getByRole('button', { name: 'Do mais caro para o mais barato', exact: true }).click();
+    await page.getByRole('button', { name: 'Maior preço', exact: true }).click();
     const prices = await page.getByTestId('product-card').evaluateAll((nodes) => nodes.map((node) => Number(node.dataset.price)));
     assert.deepEqual(prices, [...prices].sort((a, b) => b - a));
     assert.equal(await page.locator('footer').count(), 1);

@@ -16,11 +16,11 @@ export function orderLabel(order: Pick<CustomerOrder, "status" | "payment_status
   if (order.status === "canceled") return "Cancelado";
   if (order.fulfillment_status === "delivered") return "Entregue";
   if (order.fulfillment_status === "partially_delivered") return "Entrega parcial";
-  if (order.fulfillment_status === "shipped") return "Enviado";
+  if (order.fulfillment_status === "shipped") return "Saiu para entrega";
   if (order.fulfillment_status === "partially_shipped") return "Envio parcial";
   if (order.payment_status === "refunded") return "Reembolsado";
   if (order.payment_status === "partially_refunded") return "Reembolso parcial";
-  if (["fulfilled", "partially_fulfilled"].includes(order.fulfillment_status ?? "")) return "Preparando";
+  if (["fulfilled", "partially_fulfilled"].includes(order.fulfillment_status ?? "")) return "Em processamento";
   if (order.payment_status === "captured") return "Pago";
   if (order.payment_status === "partially_captured") return "Pagamento parcial";
   if (order.payment_status === "authorized") return "Pagamento autorizado";

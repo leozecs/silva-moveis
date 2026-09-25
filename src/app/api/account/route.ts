@@ -12,10 +12,10 @@ export async function GET(request: Request) {
     const offset = Number(params.get("offset") ?? 0);
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) throw new StoreError(400, "Página inválida.");
     if (section === "addresses") return privateJson(await storeRequest(`/store/customers/me/addresses?limit=20&offset=${offset}`));
-    if (section === "orders") return privateJson(await storeRequest(`/store/orders?limit=10&offset=${offset}&order=-created_at&fields=+payment_status,+fulfillment_status`));
+    if (section === "orders") return privateJson(await storeRequest(`/store/orders?limit=10&offset=${offset}&order=-created_at&fields=${encodeURIComponent("+payment_status,+fulfillment_status")}`));
     if (section === "order") {
       const id = requireId(params.get("id"), "order");
-      const payload = await storeRequest<{ order: CustomerOrder }>(`/store/orders/${id}?fields=+customer_id,+payment_status,+fulfillment_status`);
+      const payload = await storeRequest<{ order: CustomerOrder }>(`/store/orders/${id}?fields=${encodeURIComponent("+customer_id,+payment_status,+fulfillment_status")}`);
       if (payload.order.customer_id !== customer.id) throw new StoreError(404, "Pedido não encontrado.");
       return privateJson(payload);
     }

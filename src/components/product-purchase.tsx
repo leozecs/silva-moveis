@@ -7,9 +7,13 @@ import { money } from "@/lib/cart";
 import { availability } from "@/lib/availability";
 import { ProductAddToCart } from "@/components/product-add-to-cart";
 import { getVariantColor } from "@/lib/product-colors";
+import { useProductSelection } from "@/components/product-selection";
 
 export function ProductPurchase({ variants, options = [] }: { variants: StorefrontVariant[]; options?: Array<{ id: string; title: string }> }) {
-  const [selected, setSelected] = useState(variants[0]?.id ?? "");
+  const [fallback, setFallback] = useState(variants[0]?.id ?? "");
+  const selection = useProductSelection();
+  const selected = selection?.selected ?? fallback;
+  const setSelected = selection?.select ?? setFallback;
   const variant = variants.find((item) => item.id === selected);
   const stock = availability(variant);
   const price = variant?.calculated_price;

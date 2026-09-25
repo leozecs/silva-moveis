@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type StorefrontCategory, type StorefrontProduct } from "@/lib/medusa";
 import { money } from "@/lib/cart";
+import { matchesProductSearch } from "@/lib/product-search";
 
 type CatalogViewProps = {
   products: StorefrontProduct[];
@@ -26,13 +27,8 @@ export function CatalogView({ products, categories, initialQuery = "", initialCa
   const maximum = Math.min(priceLimit ?? ceiling, ceiling);
 
   const visibleProducts = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("pt-BR");
     return products.filter((product) => {
-      const matchesQuery = !normalizedQuery || [product.title, product.subtitle, product.description]
-        .filter(Boolean)
-        .join(" ")
-        .toLocaleLowerCase("pt-BR")
-        .includes(normalizedQuery);
+      const matchesQuery = matchesProductSearch(product, query);
       const matchesCategory = categoryId === "all" || product.categories?.some((category) => category.id === categoryId);
       const price = product.variants?.[0]?.calculated_price?.calculated_amount;
       return matchesQuery && matchesCategory && (price == null ? priceLimit === null : price <= maximum);
@@ -67,7 +63,7 @@ export function CatalogView({ products, categories, initialQuery = "", initialCa
           <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Sofá, poltrona, mesa..." aria-label="Buscar produtos" className="pl-9" /></div>
           <Button variant="outline" className="lg:hidden" aria-expanded={filtersOpen} aria-controls="catalog-filters" onClick={() => setFiltersOpen((value) => !value)}><SlidersHorizontal className="size-4" />Filtros</Button>
           <Badge variant="outline" className="w-fit shrink-0">{visibleProducts.length} {visibleProducts.length === 1 ? "produto" : "produtos"}</Badge>
-          <details className="relative shrink-0"><summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border px-3 py-2 text-sm"><SlidersHorizontal className="size-4" />Ordenar</summary><div className="absolute right-0 z-20 mt-2 w-64 rounded-lg border bg-background p-2 shadow-lg">{[{ value: "price-asc", label: "Do mais barato para o mais caro" }, { value: "price-desc", label: "Do mais caro para o mais barato" }].map((option) => <button key={option.value} aria-pressed={sort === option.value} className="w-full rounded p-3 text-left text-sm hover:bg-muted aria-pressed:bg-muted" onClick={(event) => { setSort(option.value); event.currentTarget.closest("details")?.removeAttribute("open"); }}>{option.label}</button>)}</div></details>
+          <details className="relative shrink-0"><summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg border px-3 py-2 text-sm"><SlidersHorizontal className="size-4" />Ordenar por: {sort === "price-asc" ? "Menor preço" : "Maior preço"}</summary><div className="absolute right-0 z-20 mt-2 w-64 rounded-lg border bg-background p-2 shadow-lg">{[{ value: "price-asc", label: "Menor preço" }, { value: "price-desc", label: "Maior preço" }].map((option) => <button key={option.value} aria-pressed={sort === option.value} className="w-full rounded p-3 text-left text-sm hover:bg-muted aria-pressed:bg-muted" onClick={(event) => { setSort(option.value); event.currentTarget.closest("details")?.removeAttribute("open"); }}>{option.label}</button>)}</div></details>
         </div>
 
         {visibleProducts.length ? (

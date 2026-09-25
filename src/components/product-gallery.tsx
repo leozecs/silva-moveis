@@ -5,10 +5,18 @@ import Image from "next/image";
 import { Maximize2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useProductSelection } from "@/components/product-selection";
 
-type ProductGalleryProps = { images: string[]; name: string };
+type ProductGalleryProps = { images: string[]; name: string; variantImages?: Record<string, string[]> };
 
-export function ProductGallery({ images, name }: ProductGalleryProps) {
+export function ProductGallery({ images: fallbackImages, name, variantImages = {} }: ProductGalleryProps) {
+  const selection = useProductSelection();
+  const matching = selection ? variantImages[selection.selected] : undefined;
+  const images = matching?.length ? matching : fallbackImages;
+  return <Gallery key={selection?.selected ?? "default"} images={images} name={name} />;
+}
+
+function Gallery({ images, name }: ProductGalleryProps) {
   const [activeImage, setActiveImage] = useState(images[0] ?? "");
   const dialog = useRef<HTMLDialogElement>(null);
   const displayed = images.includes(activeImage) ? activeImage : images[0];

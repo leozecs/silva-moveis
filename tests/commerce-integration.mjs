@@ -13,7 +13,7 @@ async function native(path, { token, data, method = data ? "POST" : "GET", statu
   return payload;
 }
 async function customer(label) {
-  const email = `silva-test-${label}-${randomUUID()}@example.com`;
+  const email = `silva-test-${label}-${randomUUID()}@example.com`.toLowerCase();
   const password = randomUUID();
   const registration = await native("/auth/customer/emailpass/register", { data: { email, password } });
   await native("/store/customers", { token: registration.token, data: { email, first_name: "Teste", last_name: label } });

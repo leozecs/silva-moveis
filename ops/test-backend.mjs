@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const commands = { generate: ["db:generate", "silva_checkout"], migrate: ["db:migrate"], seed: ["exec", "./src/scripts/seed-commerce-test.ts"], start: ["develop", "--port", "9010"] };
+const commands = { generate: ["db:generate", "silva_checkout"], migrate: ["db:migrate"], seed: ["exec", "./src/scripts/seed-commerce-test.ts"], admin: ["user", "-e", "merchant-test@example.com", "-p", "isolated-local-test-only-2026"], start: ["develop", "--port", "9010"] };
 const command = commands[process.argv[2]];
 if (!command) throw new Error("Use: node ops/test-backend.mjs migrate|seed|start");
 const child = spawn(process.execPath, [resolve(root, "apps/backend/node_modules/@medusajs/cli/cli.js"), ...command], {

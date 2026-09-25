@@ -5,6 +5,7 @@ export type StorefrontVariant = {
   allow_backorder?: boolean;
   inventory_quantity?: number | null;
   metadata?: Record<string, unknown> | null;
+  images?: Array<{ id: string; url: string }>;
   options?: Array<{ value: string; option_id: string; option?: { title?: string }; metadata?: Record<string, unknown> | null }>;
   calculated_price?: {
     calculated_amount: number;
@@ -84,6 +85,7 @@ const productFields = [
   "variants.inventory_quantity",
   "variants.metadata",
   "*variants.options",
+  "*variants.images",
   "*options",
   "collection",
   "*categories",

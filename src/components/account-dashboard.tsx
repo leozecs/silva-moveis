@@ -29,6 +29,11 @@ function useAccountResource<T>(query: string) {
   const [revision, setRevision] = useState(0);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
   useEffect(() => {
+    if (!query.startsWith("?section=order")) return;
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") refresh(); }, 15000);
+    return () => window.clearInterval(timer);
+  }, [query, refresh]);
+  useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError("");
     accountRequest<T>(query, controller.signal).then((result) => { if (!controller.signal.aborted) { setData(result); setUnauthorized(false); } }).catch((cause) => {

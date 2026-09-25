@@ -29,10 +29,11 @@ export async function beginCheckout(container: MedusaContainer, actor: string, c
     if (!cart.shipping_methods?.length) throw new MedusaError(MedusaError.Types.INVALID_DATA, "Selecione a entrega antes de finalizar");
     const address = cart.shipping_address;
     if (!address || address.country_code !== "br" || !address.address_1 || !address.city || !/^\d{8}$/.test(address.postal_code ?? "")) throw new MedusaError(MedusaError.Types.INVALID_DATA, "Confira o endereço");
+    if (cart.items.some((item) => !item) || cart.shipping_methods.some((item) => !item)) throw new MedusaError(MedusaError.Types.INVALID_DATA, "Carrinho incompleto");
     const fingerprint = createHash("sha256").update(JSON.stringify({
       currency: cart.currency_code, total: cart.total, method,
-      items: cart.items.map((item) => [item.variant_id, item.quantity, item.unit_price]).sort(),
-      shipping: cart.shipping_methods.map((item) => [item.shipping_option_id, item.amount]).sort(),
+      items: cart.items.filter((item) => item !== null).map((item) => [item.variant_id, item.quantity, item.unit_price]).sort(),
+      shipping: cart.shipping_methods.filter((item) => item !== null).map((item) => [item.shipping_option_id, item.amount]).sort(),
       address: [address.address_1, address.address_2, address.postal_code, address.city, address.province],
     })).digest("hex");
     let [attempt] = await service.listCheckoutAttempts({ cart_id: cartId });

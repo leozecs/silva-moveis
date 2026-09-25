@@ -39,7 +39,7 @@ export function ProductHero({ products }: { products: StorefrontProduct[] }) {
   const current = slides[active % (slides.length || 1)];
   const image = current && getProductImage(current);
   return <section aria-label="Produtos em destaque" aria-roledescription="carrossel" className="border-b border-border bg-graphite text-white" onFocusCapture={() => setPaused(true)}>
-    <div className="container-premium grid items-center gap-8 py-12 lg:grid-cols-2 lg:py-20">
+    <div className="container-premium grid items-center gap-8 py-10 lg:grid-cols-[0.8fr_1.2fr] lg:py-12">
       <div><p className="text-xs font-semibold uppercase tracking-[0.28em] text-gold">Silva Móveis</p>
         <h1 className="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">{current?.title ?? "Móveis para compor o seu espaço."}</h1>
         <p className="mt-5 text-xl text-white/80">{current ? getProductPrice(current) : "Encontre peças para seus melhores momentos."}</p>
@@ -49,7 +49,7 @@ export function ProductHero({ products }: { products: StorefrontProduct[] }) {
           {!reducedMotion && <button onClick={() => setPaused((value) => !value)} aria-label={paused ? "Iniciar rotação" : "Pausar rotação"} className="grid size-11 place-items-center">{paused ? <Play className="size-4" /> : <Pause className="size-4" />}</button>}
         </div>}
       </div>
-      <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-white/5">{image && <Image src={image} alt={current.title} fill priority unoptimized sizes="(max-width: 1024px) 100vw, 50vw" className="object-contain" />}</div>
+      {current && image ? <Link href={`/produto/${current.handle}`} aria-label={`Ver ${current.title}`} className="relative block aspect-square overflow-hidden rounded-xl bg-white/5 focus-visible:outline-2 focus-visible:outline-gold lg:aspect-[6/5]"><Image src={image} alt={current.title} fill priority unoptimized sizes="(max-width: 1024px) 100vw, 60vw" className="object-contain" /></Link> : <div className="aspect-square rounded-xl bg-white/5" />}
     </div>
   </section>;
 }

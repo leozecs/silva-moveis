@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   Menu,
-  Search,
   ShoppingCart,
   UserRound,
 } from "lucide-react";
@@ -20,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { ProductSearch } from "@/components/product-search";
 import { useCart } from "@/components/cart-provider";
 
 const screenGroups = [
@@ -41,23 +40,10 @@ const screenGroups = [
   },
 ];
 
-function SearchForm({ mobile = false, query, setQuery, onSubmit }: {
-  mobile?: boolean; query: string; setQuery: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-}) {
-  return <form onSubmit={onSubmit} className={mobile ? "flex w-full sm:hidden" : "hidden min-w-0 flex-1 sm:flex"} role="search">
-    <div className="relative w-full"><Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-      <Input type="search" enterKeyHint="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Sofá, poltrona, mesa..." aria-label="Buscar produtos" className="h-12 rounded-full border-black/15 bg-white/85 pl-11 pr-4 text-base shadow-none focus-visible:bg-white" />
-    </div>
-  </form>;
-}
-
 export function SiteHeader() {
-  const router = useRouter();
   const pathname = usePathname();
   const [signedIn, setSignedIn] = useState(false);
   const [accountHref, setAccountHref] = useState("/acesso");
-  const [query, setQuery] = useState("");
   const { itemCount: cartCount } = useCart();
   useEffect(() => {
     const controller = new AbortController();
@@ -74,19 +60,12 @@ export function SiteHeader() {
     return () => { controller.abort(); window.removeEventListener("silva-session-changed", refresh); };
   }, [pathname]);
 
-  function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const term = query.trim();
-
-    router.push(term ? `/catalogo?busca=${encodeURIComponent(term)}` : "/catalogo");
-  }
-
   return (
     <header className="sticky top-0 z-40 border-b border-black/10 bg-ivory shadow-sm">
       <div className="container-premium">
         <div className="flex min-h-24 items-center gap-3 py-3 sm:gap-5">
           <BrandLogo />
-          <SearchForm query={query} setQuery={setQuery} onSubmit={handleSearch} />
+          <ProductSearch />
 
           <Link
             href={accountHref}
@@ -146,7 +125,7 @@ export function SiteHeader() {
         </div>
 
         <div className="pb-3 sm:hidden">
-          <SearchForm mobile query={query} setQuery={setQuery} onSubmit={handleSearch} />
+          <ProductSearch mobile />
         </div>
       </div>
     </header>
