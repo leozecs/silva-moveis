@@ -19,6 +19,7 @@ Base: *Guia do E-Commerce Alpha Design*, edição 1.0, especialmente capítulos 
 ## G1 — plataforma
 
 - [x] VPS acessível; proxy HTTPS Caddy; Postgres e Redis sem portas públicas; Medusa limitado a `127.0.0.1:9000`. Contagem pré-deploy: 95 produtos. Backup local verificável em `/opt/silva-backups/43d2870/postgres.dump` e imagem anterior marcada para rollback.
+- [ ] **Reconciliar schema e histórico de migrations antes do próximo deploy.** Em 26/09, `db:migrate` da imagem `ea2d87a` retornou código 1: migrations centrais tentam recriar tabelas/constraints existentes, enquanto `mikro_orm_migrations` contém apenas 23 registros. A migration customizada `Migration20260924013659` concluiu e criou `checkout_attempt`; portanto houve mudança parcial no banco. Restaurar o dump em banco isolado, comparar schema e ledger por módulo, definir reparo auditável e testar `db:migrate` duas vezes sem erro no clone. Não inserir registros no ledger nem restaurar sobre produção às cegas (caps. 07, 31).
 - [ ] Validar restore desse dump em banco separado, sem tocar no banco vivo; agendar cópia externa cifrada e backup de mídia. Backup na própria VPS não cobre perda da máquina (caps. 07, 31).
 - [ ] Persistir uploads num volume testado; configurar URL HTTPS correta do provider de arquivos; testar upload, leitura, exclusão e rebuild sem perder foto (cap. 10).
 - [ ] Configurar Redis explicitamente para event bus/workflows/locks onde necessário; o log observado ainda advertia sobre Local Event Bus. Medir reinício/retry (cap. 08).
@@ -28,6 +29,7 @@ Base: *Guia do E-Commerce Alpha Design*, edição 1.0, especialmente capítulos 
 ## G2 — comércio e catálogo
 
 - [x] Região Brasil/BRL, canal e catálogo de 95 produtos disponíveis na API. Frontend busca esses produtos; variantes e cores vêm do Medusa.
+- [ ] Confirmar que frontend usa a chave **Silva Moveis Storefront** vinculada ao sales channel: a chave padrão existente respondeu zero produtos; a chave da loja respondeu 95 no candidato. Testar também na URL pública depois do deploy.
 - [ ] Conferir cada SKU, imagem, variante, medida, composição e preço com o PDF Silva Móveis 2026. Registrar divergências; importação repetida não pode duplicar (caps. 09–10).
 - [ ] Corrigir escala monetária conforme bloqueador acima e confirmar produto publicado, canal, chave pública, região e estoque por variante (caps. 09, 17).
 - [ ] Testar produto novo no painel até catálogo, busca, variante, carrinho e total oficial; no painel atual a edição monetária fica bloqueada até correção (cap. 09).
@@ -62,7 +64,7 @@ Base: *Guia do E-Commerce Alpha Design*, edição 1.0, especialmente capítulos 
 
 ## G7 — liberação
 
-- [ ] Backend novo na VPS com migration concluída e smoke de health, 95 produtos, login, carrinho, API privada e logs. Registrar SHA e imagem final. Não marcar apenas porque build passou (cap. 31).
+- [ ] Backend novo na VPS com migration concluída e smoke de health, 95 produtos, login, carrinho, API privada e logs. Candidato `silva-medusa:ea2d87a` compilou, respondeu `/health` 200 e listou 95 produtos na porta privada 9001, mas **não foi promovido**: migration retornou 1. Produção permanece na imagem `silva-moveis-medusa`, `/health` público 200. O container candidato temporário foi removido; imagem e logs de build/migration ficaram na VPS. Após reparar a migration no clone, repetir backup, executar migration limpa, promover e testar (cap. 31).
 - [ ] Verificar frontend/VPS no mesmo ambiente e domínio, secrets fora do bundle, CORS e cookies; revisar rate limit, firewall, CSP e headers sem quebrar compra (caps. 05, 11–12, 29).
 - [ ] Ensaiar rollback e restore; confirmar que backup externo e imagens sobrevivem à perda da VPS (cap. 31).
 - [ ] Rodar matriz final: cliente novo/existente, login, produto, variante, endereço, frete, Pix/crédito/boleto, webhook, pedido, estoque, e-mail, cancelamento e recuperação com evidência por método (caps. 30, 33).
