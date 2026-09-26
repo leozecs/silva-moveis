@@ -8,6 +8,19 @@ test("mutações recusam origem ausente, forjada ou cross-site", () => {
   }
   assert.doesNotThrow(() => assertSameOrigin(new Request("https://loja.example/api/cart", { headers: { origin: "https://loja.example" } })));
 });
+test("proxy privado aceita só origem pública configurada", () => {
+  const previous = process.env.SILVA_PUBLIC_ORIGIN;
+  process.env.SILVA_PUBLIC_ORIGIN = "https://loja.example";
+  try {
+    const internal = "http://0.0.0.0:3000/api/auth/login";
+    assert.doesNotThrow(() => assertSameOrigin(new Request(internal, { headers: { origin: "https://loja.example" } })));
+    assert.throws(() => assertSameOrigin(new Request(internal, { headers: { origin: "https://attacker.example" } })), { status: 403 });
+    assert.throws(() => assertSameOrigin(new Request(internal, { headers: { origin: "https://loja.example", "sec-fetch-site": "cross-site" } })), { status: 403 });
+  } finally {
+    if (previous === undefined) delete process.env.SILVA_PUBLIC_ORIGIN;
+    else process.env.SILVA_PUBLIC_ORIGIN = previous;
+  }
+});
 test("IDs e quantidades rejeitam injeção, frações, infinito e limites", () => {
   assert.equal(requireId("cart_01ABCDEF", "cart"), "cart_01ABCDEF");
   assert.throws(() => requireId("../customers/me", "cart"));

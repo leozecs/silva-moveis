@@ -11,7 +11,11 @@ export class StoreError extends Error {
 export function assertSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   const expected = new URL(request.url).origin;
-  if (origin !== expected || request.headers.get("sec-fetch-site") === "cross-site") {
+  // Behind a private reverse proxy, Next can see the container's bind address
+  // rather than the public URL. Trust only the configured public origin, never
+  // client-supplied forwarded host/protocol headers.
+  const publicOrigin = process.env.SILVA_PUBLIC_ORIGIN;
+  if ((origin !== expected && (!publicOrigin || origin !== publicOrigin)) || request.headers.get("sec-fetch-site") === "cross-site") {
     throw new StoreError(403, "Origem da solicitação inválida.", "invalid_origin");
   }
 }
