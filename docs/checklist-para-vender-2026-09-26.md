@@ -13,6 +13,7 @@ Base: *Guia do E-Commerce Alpha Design*, edição 1.0, especialmente capítulos 
 ## G0 — decisões comerciais e arquitetura
 
 - [x] Next.js na Vercel, Medusa na VPS, PostgreSQL/Redis privados; responsabilidades e dados descritos em `docs/infraestrutura.md`.
+- [x] Frontend também disponível na VPS para testes em `https://2-25-218-128.sslip.io/`, com Docker/Caddy/TLS e login de lojista validado. Evidências em `docs/deploy-frontend-vps-2026-09-26.md`. A Vercel não foi desligada; domínio próprio continua pendente.
 - [ ] Aprovar valores, condições de frete/retirada, prazos, alcance de entrega, política de troca, contato e atendimento reais. Revisar textos legais/LGPD com responsável pelo negócio (caps. 04, 17, 29).
 - [ ] Formalizar quem atende pedidos, incidentes, estorno e perda de estoque; definir RPO/RTO do banco (caps. 31–32).
 
