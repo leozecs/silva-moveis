@@ -62,6 +62,7 @@ module.exports = defineConfig({
   ],
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    ...(process.env.SILVA_DB_SSL_DISABLE === 'true' ? { databaseDriverOptions: { connection: { ssl: false } } } : {}),
     redisUrl: process.env.REDIS_URL,
     http: {
       storeCors: process.env.STORE_CORS!,

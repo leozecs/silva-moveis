@@ -1,0 +1,25 @@
+# Overlay for the existing Hostinger stack. Keep its PostgreSQL volume,
+# Redis service, network, proxy and secrets unchanged.
+# Run with the canonical /opt/silva-moveis/docker-compose.yml first.
+services:
+  medusa:
+    image: ${MEDUSA_RELEASE_IMAGE:?Set an immutable Medusa release image}
+    env_file:
+      - /opt/silva-moveis/backend/.env
+    environment:
+      NODE_ENV: production
+      SILVA_COMMERCE_TEST: "false"
+      SILVA_DB_SSL_DISABLE: "true"
+    volumes:
+      - /opt/silva-moveis/uploads:/server/apps/backend/.medusa/server/static
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9000/health >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "5"
