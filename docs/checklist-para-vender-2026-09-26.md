@@ -25,7 +25,7 @@ Base: *Guia do E-Commerce Alpha Design*, edição 1.0, especialmente capítulos 
 - [ ] Persistir uploads num volume testado; configurar URL HTTPS correta do provider de arquivos; testar upload, leitura, exclusão e rebuild sem perder foto (cap. 10).
 - [ ] Configurar Redis explicitamente para event bus/workflows/locks onde necessário; o log observado ainda advertia sobre Local Event Bus. Medir reinício/retry (cap. 08).
 - [ ] Monitorar API, banco, Redis, disco, proxy e catálogo; alertas com dono, health externo e rollback exercitado (cap. 32).
-- [ ] Validar DNS autoritativo, domínio próprio, TLS e regra Cloudflare sem cache de auth, carrinho, checkout, webhook ou Admin; webhook sem desafio interativo (cap. 11).
+- [ ] **Restaurar DNS do domínio próprio.** Em 26/09, `silvamoveis.com.br` e `www.silvamoveis.com.br` retornaram NXDOMAIN em consulta DNS; o domínio temporário `silva-moveis.vercel.app` respondeu à busca de produtos. Validar delegação/zonas autoritativas, TLS e regra Cloudflare sem cache de auth, carrinho, checkout, webhook ou Admin; webhook sem desafio interativo (cap. 11).
 
 ## G2 — comércio e catálogo
 
@@ -65,7 +65,8 @@ Base: *Guia do E-Commerce Alpha Design*, edição 1.0, especialmente capítulos 
 
 ## G7 — liberação
 
-- [ ] Promover backend novo na VPS e fazer smoke de login, carrinho, API privada e logs. A migration já está limpa e repetível; o candidato `silva-medusa:ea2d87a` compilou e passou health/catálogo isolados, mas a produção ainda usa a imagem `silva-moveis-medusa`. Após promoção, validar comportamento ponta a ponta e registrar SHA/imagem final. `/health` público e catálogo de 95 produtos permanecem operantes na imagem anterior (cap. 31).
+- [x] Backend `silva-medusa:ea2d87a` promovido na VPS em 26/09. `db:migrate` pré-deploy código 0; container healthy; `/health` local e HTTPS públicos 200; API de catálogo com 95 produtos; `/admin/products` sem login 401; CORS da Vercel liberado; logs sem erros no smoke. Backup pré-deploy em `/opt/silva-backups/deploy-ea2d87a-20260926/pre-deploy.dump`; imagem anterior preservada para rollback. Evidências em `docs/deploy-backend-2026-09-26.md` (cap. 31).
+- [ ] Homologar login real de cliente/lojista, criação e recuperação de carrinho, pedido, upload de imagem e fluxos privados ponta a ponta na imagem promovida. Health/catálogo não comprovam essas operações (cap. 31).
 - [ ] Verificar frontend/VPS no mesmo ambiente e domínio, secrets fora do bundle, CORS e cookies; revisar rate limit, firewall, CSP e headers sem quebrar compra (caps. 05, 11–12, 29).
 - [ ] Ensaiar rollback e restore; confirmar que backup externo e imagens sobrevivem à perda da VPS (cap. 31).
 - [ ] Rodar matriz final: cliente novo/existente, login, produto, variante, endereço, frete, Pix/crédito/boleto, webhook, pedido, estoque, e-mail, cancelamento e recuperação com evidência por método (caps. 30, 33).
