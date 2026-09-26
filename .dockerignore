@@ -1,7 +1,12 @@
 node_modules
+**/node_modules
 .next
+**/.next
 .git
 .gitignore
+.env*
+**/.env*
+!.env.example
 next-dev.out.log
 next-dev.err.log
 README.md

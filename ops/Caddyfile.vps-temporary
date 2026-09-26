@@ -1,0 +1,24 @@
+api.silvamoveis.com.br {
+    reverse_proxy silva-medusa-backend:9000
+    encode zstd gzip
+    log {
+        output stdout
+    }
+}
+
+srv1969702.hstgr.cloud {
+    reverse_proxy silva-medusa-backend:9000
+    encode zstd gzip
+    log {
+        output stdout
+    }
+}
+
+2-25-218-128.sslip.io {
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    reverse_proxy silva-moveis-web:3000
+    encode zstd gzip
+    log {
+        output stdout
+    }
+}
