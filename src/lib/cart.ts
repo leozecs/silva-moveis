@@ -34,5 +34,5 @@ export type StoreCart = {
 export const CART_STORAGE_KEY = "silva_cart_id";
 
 export function money(value = 0, currency = "BRL") {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(value / 100);
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(value);
 }

@@ -4,6 +4,10 @@ import { matchesProductSearch } from "@/lib/product-search";
 export async function GET(request: Request) {
   const query = new URL(request.url).searchParams.get("q")?.trim() ?? "";
   if (!query || query.length > 100) return Response.json({ products: [], hasMore: false });
-  const products = (await getStorefrontProducts()).filter((product) => matchesProductSearch(product, query));
-  return Response.json({ products: products.slice(0, 5).map((product) => ({ id: product.id, title: product.title, href: `/produto/${product.handle}`, image: getProductImage(product), price: getProductPrice(product) })), hasMore: products.length > 5 }, { headers: { "Cache-Control": "no-store" } });
+  try {
+    const products = (await getStorefrontProducts()).filter((product) => matchesProductSearch(product, query));
+    return Response.json({ products: products.slice(0, 5).map((product) => ({ id: product.id, title: product.title, href: `/produto/${product.handle}`, image: getProductImage(product), price: getProductPrice(product) })), hasMore: products.length > 5 }, { headers: { "Cache-Control": "no-store" } });
+  } catch {
+    return Response.json({ error: "Busca indisponível. Tente novamente." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
 }

@@ -33,7 +33,7 @@ export default async function ProdutoPage({ params }: ProductPageProps) {
     image: images,
     sku: product.variants?.[0]?.id,
     brand: { "@type": "Brand", name: "Silva Móveis" },
-    offers: calculatedPrice ? { "@type": "Offer", priceCurrency: calculatedPrice.currency_code.toUpperCase(), price: (calculatedPrice.calculated_amount / 100).toFixed(2), availability: `https://schema.org/${availability(product.variants?.[0]).schema}`, url: `https://silvamoveis.com.br/produto/${product.handle}` } : undefined,
+    offers: calculatedPrice ? { "@type": "Offer", priceCurrency: calculatedPrice.currency_code.toUpperCase(), price: calculatedPrice.calculated_amount.toFixed(2), availability: `https://schema.org/${availability(product.variants?.[0]).schema}`, url: `https://silvamoveis.com.br/produto/${product.handle}` } : undefined,
   };
 
   return (

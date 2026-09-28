@@ -52,22 +52,14 @@ const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY;
 const regionId = process.env.NEXT_PUBLIC_MEDUSA_REGION_ID;
 
 async function storefrontFetch<T>(path: string): Promise<T | null> {
-  if (!backendUrl) return null;
+  if (!backendUrl) throw new Error("Catálogo indisponível: backend não configurado");
 
   const headers = new Headers();
   if (publishableKey) headers.set("x-publishable-api-key", publishableKey);
 
-  try {
-    const response = await fetch(`${backendUrl}${path}`, {
-      headers,
-      cache: "no-store",
-    });
-
-    if (!response.ok) return null;
-    return (await response.json()) as T;
-  } catch {
-    return null;
-  }
+  const response = await fetch(`${backendUrl}${path}`, { headers, cache: "no-store" });
+  if (!response.ok) throw new Error(`Catálogo indisponível: HTTP ${response.status}`);
+  return (await response.json()) as T;
 }
 
 const productFields = [
@@ -105,7 +97,7 @@ export async function getStorefrontProducts(options?: {
   for (let offset = 0; ; offset += 100) {
     params.set("offset", String(offset));
     const payload = await storefrontFetch<ProductsResponse>(`/store/products?${params.toString()}`);
-    if (!payload?.products) return [];
+    if (!Array.isArray(payload?.products)) throw new Error("Resposta inválida do catálogo");
     products.push(...payload.products);
     if (options?.limit || payload.products.length < 100 || products.length >= (payload.count ?? Infinity)) break;
   }
@@ -122,14 +114,16 @@ export async function getStorefrontProduct(handle: string) {
   const payload = await storefrontFetch<ProductsResponse>(
     `/store/products?${params.toString()}`
   );
-  return payload?.products?.[0] ?? null;
+  if (!Array.isArray(payload?.products)) throw new Error("Resposta inválida do catálogo");
+  return payload.products[0] ?? null;
 }
 
 export async function getStorefrontCategories() {
   const payload = await storefrontFetch<CategoriesResponse>(
     "/store/product-categories?limit=100"
   );
-  const categories = payload?.product_categories ?? [];
+  if (!Array.isArray(payload?.product_categories)) throw new Error("Resposta inválida das categorias");
+  const categories = payload.product_categories;
   const storefrontCategories = categories.filter((category) => category.metadata?.storefront_filter === true);
   return storefrontCategories.length ? storefrontCategories : categories;
 }
@@ -153,7 +147,7 @@ export function getProductPrice(product: StorefrontProduct) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: price.currency_code.toUpperCase(),
-  }).format(price.calculated_amount / 100);
+  }).format(price.calculated_amount);
 }
 
 export async function getStorefrontCustomer(token: string) {

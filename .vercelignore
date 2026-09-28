@@ -4,3 +4,11 @@ next-dev.out.log
 next-dev.err.log
 npm-debug.log*
 .chrome-profile
+.env*
+**/.env*
+.git
+apps/backend
+**/._*
+**/.DS_Store
+.next-commerce-test
+tsconfig.tsbuildinfo
